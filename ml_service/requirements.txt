@@ -1,0 +1,6 @@
+flask
+transformers
+torch
+shap
+newspaper3k
+beautifulsoup4
