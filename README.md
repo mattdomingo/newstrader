@@ -41,3 +41,4 @@ make clean
 - Timeout for requests is set to 15 seconds.
 - Outputs in English only.
 
+TEST
