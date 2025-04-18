@@ -40,3 +40,5 @@ make clean
 - The program retries once on network failure.
 - Timeout for requests is set to 15 seconds.
 - Outputs in English only.
+
+TEST
