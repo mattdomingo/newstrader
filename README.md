@@ -1,7 +1,7 @@
 # SimpleNewsTrader
 
 ## Overview
-A C program that fetches the latest 10 technology industry news headlines from NewsAPI, analyzes each headline for simple trading recommendations (BUY, SELL, HOLD), and prints the results to the command line.
+An unfinished C program that fetches the latest 10 technology industry news headlines from NewsAPI, analyzes each headline for simple trading recommendations (BUY, SELL, HOLD), and prints the results to the command line.
 
 ## Prerequisites
 - macOS or Linux
