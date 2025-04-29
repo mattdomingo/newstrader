@@ -1,6 +1,8 @@
 flask
+Flask-CORS
 transformers
 torch
 shap
 newspaper3k
+requests
 beautifulsoup4

@@ -1,4 +1,9 @@
+import os # Keep os import
+# Disable tokenizer parallelism before importing transformers
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 from flask import Flask, request, jsonify
+from flask_cors import CORS # Import CORS
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import shap
 import torch
@@ -8,6 +13,7 @@ import requests
 import traceback
 
 app = Flask(__name__)
+CORS(app) # Enable CORS for the entire app
 
 # Load pre-trained FinBERT model
 MODEL_ID = "ProsusAI/finbert"
@@ -80,6 +86,67 @@ def scrape_article(url):
         print(traceback.format_exc())
         return None
 
+# Get NewsAPI Key - Use environment variable or fallback to the provided key
+NEWSAPI_KEY = os.environ.get("NEWSAPI_KEY", "0f64f75298ec40a9818c972bc74fabd9")
+
+def analyze_text(text_to_analyze, url=None):
+    """Reusable analysis function, similar to existing /analyze logic."""
+    # Add a check for empty or whitespace-only input
+    if not text_to_analyze or text_to_analyze.isspace():
+        print(f"Skipping analysis for empty input (URL: {url})")
+        return {"sentiment": 0.0, "tokens": [], "error": "Input text is empty"}
+
+    sentiment_score = 0.0
+    top_tokens = []
+    analysis_error = None
+
+    try:
+        # --- Sentiment Prediction --- 
+        inputs = tokenizer(text_to_analyze, return_tensors="pt", truncation=True, padding=True, max_length=512)
+        with torch.no_grad():
+            outputs = model(**inputs)
+        scores = torch.softmax(outputs.logits, dim=1).detach().numpy()[0]
+        sentiment_score = float(scores[2] - scores[0]) # positive - negative
+
+        # --- SHAP Explanation (with separate error handling) --- 
+        try:
+            # Ensure input is a list of one string
+            shap_values = explainer([str(text_to_analyze)])
+            
+            # Extract tokens and values safely
+            tokens = shap_values.data[0]
+            # Use the positive sentiment class (index 2) for explanation
+            values = shap_values.values[0, :, 2]
+            
+            # Pick top 3 tokens by absolute impact
+            token_contribs = list(zip(tokens, values))
+            # Filter out any potential NaN/inf values from SHAP before sorting
+            token_contribs_filtered = [(tok, val) for tok, val in token_contribs if np.isfinite(val)]
+            token_contribs_sorted = sorted(token_contribs_filtered, key=lambda x: abs(x[1]), reverse=True)
+            top_tokens = [tok for tok, val in token_contribs_sorted[:3]]
+
+        except Exception as shap_e:
+            print(f"SHAP calculation failed for text: '{text_to_analyze[:50]}...'")
+            print(f"SHAP Error: {shap_e}")
+            # Optionally print traceback for SHAP error:
+            # print(traceback.format_exc())
+            top_tokens = [] # Default to empty tokens on SHAP failure
+            # We still have the sentiment score, so don't set analysis_error unless needed
+
+    except Exception as e:
+        print(f"Error during sentiment analysis for text: '{text_to_analyze[:50]}...'")
+        print(f"Analysis Error: {e}")
+        print(traceback.format_exc())
+        sentiment_score = 0.0 # Reset score on error
+        top_tokens = []
+        analysis_error = str(e)
+
+    result = {"sentiment": sentiment_score, "tokens": top_tokens}
+    if analysis_error:
+        result["error"] = analysis_error
+    
+    return result
+
 @app.route("/analyze", methods=["POST"])
 def analyze():
     data = request.get_json()
@@ -116,8 +183,9 @@ def analyze():
         }), 400
     
     # Tokenize and predict
-    inputs = tokenizer(full_text, return_tensors="pt", truncation=True, padding=True)
-    outputs = model(**inputs)
+    inputs = tokenizer(full_text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+    with torch.no_grad():
+        outputs = model(**inputs)
     scores = torch.softmax(outputs.logits, dim=1).detach().numpy()[0]
     
     # sentiment score = positive minus negative
@@ -146,5 +214,51 @@ def analyze():
         "tokens": top_tokens
     })
 
+# New endpoint to fetch news and analyze
+@app.route("/news_analysis", methods=["GET"])
+def get_news_analysis():
+    print("Fetching news from NewsAPI...")
+    news_url = (
+        f"https://newsapi.org/v2/top-headlines?"
+        f"category=technology&language=en&pageSize=10&"
+        f"apiKey={NEWSAPI_KEY}"
+    )
+    results = []
+    try:
+        response = requests.get(news_url, timeout=15)
+        response.raise_for_status()
+        news_data = response.json()
+
+        articles = news_data.get("articles", [])
+        print(f"Fetched {len(articles)} articles.")
+
+        for article in articles:
+            headline = article.get("title", "")
+            article_url = article.get("url", "")
+            content_to_analyze = headline
+
+            print(f"Analyzing: {headline}")
+            analysis_result = analyze_text(content_to_analyze, url=article_url)
+
+            results.append({
+                "headline": headline,
+                "url": article_url,
+                "sentiment": analysis_result.get("sentiment", 0.0),
+                "tokens": analysis_result.get("tokens", [])
+            })
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching news from NewsAPI: {e}")
+        return jsonify({"error": f"Failed to fetch news: {e}"}), 500
+    except Exception as e:
+        print(f"An error occurred during news analysis: {e}")
+        print(traceback.format_exc())
+        return jsonify({"error": f"An internal error occurred: {e}"}), 500
+
+    print(f"Returning {len(results)} analyzed articles.")
+    return jsonify(results)
+
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000)
+    # Run on 0.0.0.0 to be accessible from other devices on the network
+    # (like a React dev server running on the same machine)
+    app.run(host="0.0.0.0", port=5000)
