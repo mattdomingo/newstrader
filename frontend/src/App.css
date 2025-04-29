@@ -1,0 +1,222 @@
+/* Basic Styling */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f4f7f6;
+  color: #333;
+}
+
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+  margin-bottom: 30px;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2em;
+}
+
+main {
+  max-width: 100%;
+  padding: 0 20px;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+  box-sizing: border-box;
+}
+
+.feed-container {
+  flex: 1;
+  max-width: 600px;
+  display: flex;
+  justify-content: center;
+}
+
+.article-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  width: 100%;
+}
+
+.charts-container {
+  flex-shrink: 0;
+  width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 30px;
+}
+
+.chart-wrapper {
+  border: 1px solid #dbdbdb;
+  border-radius: 8px;
+  background-color: #fff;
+  padding: 10px;
+  height: 250px;
+}
+
+.chart-wrapper h3 {
+  margin: 0 0 10px 5px;
+  font-size: 1em;
+  text-align: left;
+}
+
+.chart-container-inner {
+  width: 100%;
+  height: calc(100% - 30px);
+}
+
+.article-card {
+  background-color: #fff;
+  border: 1px solid #dbdbdb;
+  border-radius: 8px;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  border-bottom: 1px solid #dbdbdb;
+}
+
+.card-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 12px;
+  object-fit: contain;
+  background-color: #eee;
+}
+
+.card-source {
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+.card-content {
+  padding: 15px;
+}
+
+.article-card h2 {
+  font-size: 1.1em;
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.article-card h2 a {
+  text-decoration: none;
+  color: #00376b;
+}
+
+.article-card h2 a:hover {
+  text-decoration: underline;
+}
+
+.article-card p {
+  font-size: 0.9em;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.card-sentiment {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.card-sentiment p {
+  margin-bottom: 0;
+}
+
+.card-tokens p {
+  font-size: 0.8em;
+  color: #666;
+}
+
+.error {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1024px) {
+  main {
+    flex-direction: column;
+    align-items: center;
+  }
+  .feed-container {
+    max-width: 600px;
+    width: 100%;
+  }
+  .charts-container {
+    width: 100%;
+    max-width: 600px;
+    padding-top: 0;
+    margin-top: 30px;
+  }
+  .chart-wrapper {
+    height: 300px;
+  }
+}
+
+@media (max-width: 600px) {
+  main {
+    padding: 0;
+  }
+  .feed-container {
+    padding: 0 10px;
+    box-sizing: border-box;
+    max-width: 100%;
+  }
+  .charts-container {
+    padding: 0 10px;
+    box-sizing: border-box;
+  }
+  .article-list {
+    max-width: 100%;
+    padding: 0 10px;
+    box-sizing: border-box;
+  }
+  .article-card {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
