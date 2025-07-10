@@ -1,17 +1,18 @@
-/* Basic Styling */
+/* Modern Styling */
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f4f7f6;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #333;
+  min-height: 100vh;
 }
 
 .App {
   text-align: center;
+  min-height: 100vh;
+  background: transparent;
 }
 
 .App-logo {
@@ -26,24 +27,31 @@ body {
 }
 
 .App-header {
-  background-color: #282c34;
-  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 30px 20px;
   color: white;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .App-header h1 {
   margin: 0;
-  font-size: 2em;
+  font-size: 2.5em;
+  font-weight: 700;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: -0.5px;
 }
 
 main {
-  max-width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
   padding: 0 20px;
   width: 100%;
   display: flex;
   flex-direction: row;
-  gap: 30px;
+  gap: 40px;
   box-sizing: border-box;
 }
 
@@ -72,17 +80,27 @@ main {
 }
 
 .chart-wrapper {
-  border: 1px solid #dbdbdb;
-  border-radius: 8px;
-  background-color: #fff;
-  padding: 10px;
-  height: 250px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 20px;
+  height: 280px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.chart-wrapper:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
 .chart-wrapper h3 {
-  margin: 0 0 10px 5px;
-  font-size: 1em;
+  margin: 0 0 15px 0;
+  font-size: 1.1em;
   text-align: left;
+  color: #333;
+  font-weight: 600;
 }
 
 .chart-container-inner {
@@ -91,19 +109,29 @@ main {
 }
 
 .article-card {
-  background-color: #fff;
-  border: 1px solid #dbdbdb;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
   text-align: left;
   width: 100%;
   box-sizing: border-box;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.article-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
   display: flex;
   align-items: center;
-  padding: 12px 15px;
-  border-bottom: 1px solid #dbdbdb;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
 }
 
 .card-logo {
@@ -121,7 +149,7 @@ main {
 }
 
 .card-content {
-  padding: 15px;
+  padding: 20px;
 }
 
 .article-card h2 {
@@ -148,8 +176,12 @@ main {
 .card-sentiment {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
 }
 
 .card-sentiment p {
@@ -164,6 +196,21 @@ main {
 .error {
   color: #dc3545;
   font-weight: bold;
+  background: rgba(220, 53, 69, 0.1);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 4px solid #dc3545;
+  margin: 20px 0;
+}
+
+.loading-message {
+  color: #007bff;
+  font-weight: 500;
+  background: rgba(0, 123, 255, 0.1);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+  margin: 20px 0;
 }
 
 /* Responsive Adjustments */
@@ -219,4 +266,28 @@ main {
   to {
     transform: rotate(360deg);
   }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Add subtle animations */
+.feed-container {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.charts-container {
+  animation: slideInRight 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
 }

@@ -17,6 +17,10 @@ int parse_articles(const char *json, Article **articles, int *count) {
         if (!ts_end) break;
         size_t ts_len = ts_end - ts_start;
         arr[idx].publishedAt = malloc(ts_len + 1);
+        if (!arr[idx].publishedAt) {
+            free(arr);
+            return 1;
+        }
         strncpy(arr[idx].publishedAt, ts_start, ts_len);
         arr[idx].publishedAt[ts_len] = '\0';
 
@@ -27,6 +31,11 @@ int parse_articles(const char *json, Article **articles, int *count) {
         if (!t_end) break;
         size_t t_len = t_end - t_start;
         arr[idx].title = malloc(t_len + 1);
+        if (!arr[idx].title) {
+            free(arr[idx].publishedAt);
+            free(arr);
+            return 1;
+        }
         strncpy(arr[idx].title, t_start, t_len);
         arr[idx].title[t_len] = '\0';
 
@@ -35,6 +44,15 @@ int parse_articles(const char *json, Article **articles, int *count) {
         if (!u_start) {
             // If URL is not found, set it as an empty string
             arr[idx].url = malloc(1);
+            if (!arr[idx].url) {
+                // Free already allocated memory before returning error
+                for (int j = 0; j <= idx; j++) {
+                    free(arr[j].publishedAt);
+                    free(arr[j].title);
+                }
+                free(arr);
+                return 1;
+            }
             arr[idx].url[0] = '\0';
         } else {
             u_start += strlen("\"url\":\"");
@@ -42,10 +60,28 @@ int parse_articles(const char *json, Article **articles, int *count) {
             if (!u_end) {
                 // If URL format is incorrect, set it as an empty string
                 arr[idx].url = malloc(1);
+                if (!arr[idx].url) {
+                    // Free already allocated memory before returning error
+                    for (int j = 0; j <= idx; j++) {
+                        free(arr[j].publishedAt);
+                        free(arr[j].title);
+                    }
+                    free(arr);
+                    return 1;
+                }
                 arr[idx].url[0] = '\0';
             } else {
                 size_t u_len = u_end - u_start;
                 arr[idx].url = malloc(u_len + 1);
+                if (!arr[idx].url) {
+                    // Free already allocated memory before returning error
+                    for (int j = 0; j <= idx; j++) {
+                        free(arr[j].publishedAt);
+                        free(arr[j].title);
+                    }
+                    free(arr);
+                    return 1;
+                }
                 strncpy(arr[idx].url, u_start, u_len);
                 arr[idx].url[u_len] = '\0';
             }

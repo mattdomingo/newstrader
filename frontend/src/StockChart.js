@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType } from 'lightweight-charts';
+import { createChart } from 'lightweight-charts';
 
 const StockChart = ({ symbol, title, apiKey }) => {
   const chartContainerRef = useRef();
@@ -7,113 +7,183 @@ const StockChart = ({ symbol, title, apiKey }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!apiKey || apiKey === 'YOUR_ALPHA_VANTAGE_KEY') {
-      setError('Alpha Vantage API key not provided.');
+    // Check if API key is configured
+    if (!apiKey || apiKey === 'YOUR_ALPHA_VANTAGE_KEY' || apiKey === '' || apiKey === 'your_alpha_vantage_key_here') {
+      setError('Alpha Vantage API key not configured. Charts disabled.');
       setLoading(false);
       return;
     }
 
     let chart;
     let lineSeries;
+    let mounted = true;
 
     const fetchDataAndDrawChart = async () => {
+      if (!mounted) return;
+      
       setLoading(true);
       setError(null);
+      
       try {
-        // Fetch daily adjusted data from Alpha Vantage
-        const apiUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=compact&apikey=${apiKey}`;
+        // Fetch daily data from Alpha Vantage
+        const apiUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=compact&apikey=${apiKey}`;
+        console.log(`Fetching data for ${symbol}`);
+        
         const response = await fetch(apiUrl);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
 
-        // Add detailed logging of the entire response
-        console.log(`Alpha Vantage Response for ${symbol}:`, JSON.stringify(data, null, 2));
-
         // Check for API errors or rate limiting
         if (data['Error Message']) {
           throw new Error(`API Error: ${data['Error Message']}`);
         }
         if (data['Note']) {
-           console.warn('Alpha Vantage API Note:', data['Note']);
-           // Potentially rate limited, show message
-           throw new Error('API rate limit likely reached. Please wait and try again.');
+           throw new Error('API rate limit reached. Please try again in a few minutes.');
+        }
+        if (data['Information']) {
+           throw new Error('API call frequency limit reached. Please try again later.');
         }
         if (!data['Time Series (Daily)']) {
-           throw new Error('No time series data found in API response.');
+           throw new Error(`No daily time series data available for ${symbol}.`);
         }
 
-        // Format data for Lightweight Charts (time: YYYY-MM-DD, value: adjusted close)
+        // Only proceed if component is still mounted
+        if (!mounted) return;
+
+        // Format data for Lightweight Charts
         const formattedData = Object.entries(data['Time Series (Daily)'])
           .map(([date, values]) => ({
             time: date,
-            value: parseFloat(values['5. adjusted close']),
+            value: parseFloat(values['4. close']),
           }))
-          .sort((a, b) => new Date(a.time) - new Date(b.time)); // Sort ascending by date
+          .sort((a, b) => new Date(a.time) - new Date(b.time));
         
         if (formattedData.length === 0) {
             throw new Error('No valid data points after formatting.');
         }
 
-        // --- Create Chart ---
-        chart = createChart(chartContainerRef.current, {
+        // Only create chart if container exists and component is mounted
+        if (!chartContainerRef.current || !mounted) return;
+
+        // Get container dimensions
+        const container = chartContainerRef.current;
+        const width = container.clientWidth || 300;
+        const height = container.clientHeight || 200;
+
+        // Create chart with v4.x API
+        chart = createChart(container, {
+          width: width,
+          height: height,
           layout: {
-            background: { type: ColorType.Solid, color: '#ffffff' },
+            backgroundColor: '#ffffff',
             textColor: '#333',
           },
           grid: {
-            vertLines: { color: '#f0f0f0' },
-            horzLines: { color: '#f0f0f0' },
+            vertLines: {
+              color: '#f0f0f0',
+            },
+            horzLines: {
+              color: '#f0f0f0',
+            },
           },
-          width: chartContainerRef.current.clientWidth,
-          height: chartContainerRef.current.clientHeight,
           timeScale: {
              timeVisible: true,
              secondsVisible: false,
           }
         });
 
-        lineSeries = chart.addLineSeries({ color: '#2962FF' });
-        lineSeries.setData(formattedData);
+        // Add line series
+        lineSeries = chart.addLineSeries({
+          color: '#2962FF',
+          lineWidth: 2,
+        });
 
+        // Set data
+        lineSeries.setData(formattedData);
+        
+        // Fit content to time scale
         chart.timeScale().fitContent();
+
+        console.log(`Chart created successfully for ${symbol}`);
 
       } catch (err) {
         console.error(`Failed to fetch or draw chart for ${symbol}:`, err);
-        setError(err.message);
+        if (mounted) {
+          setError(err.message || 'Chart loading failed');
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchDataAndDrawChart();
+    // Add delay to prevent API rate limiting
+    const timeoutId = setTimeout(fetchDataAndDrawChart, 1000);
 
-    // Handle resizing
+    // Handle window resize
     const handleResize = () => {
-      if (chart) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+      if (chart && chartContainerRef.current) {
+        try {
+          chart.applyOptions({ 
+            width: chartContainerRef.current.clientWidth,
+            height: chartContainerRef.current.clientHeight 
+          });
+        } catch (resizeError) {
+          console.error('Chart resize error:', resizeError);
+        }
       }
     };
 
     window.addEventListener('resize', handleResize);
 
-    // Cleanup
+    // Cleanup function
     return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
       if (chart) {
-        chart.remove();
+        try {
+          chart.remove();
+        } catch (removeError) {
+          console.error('Chart removal error:', removeError);
+        }
       }
     };
-  }, [symbol, apiKey]); // Rerun effect if symbol or apiKey changes
+  }, [symbol, apiKey]);
 
   return (
     <div className="chart-wrapper">
       <h3>{title} ({symbol})</h3>
       <div ref={chartContainerRef} className="chart-container-inner">
-        {loading && <p>Loading chart data...</p>}
-        {error && <p className="error">Error: {error}</p>}
-        {/* Chart is rendered directly into the ref'd div */}
+        {loading && (
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            height: '100%',
+            color: '#007bff',
+            fontSize: '0.9em'
+          }}>
+            <div>📈 Loading chart data...</div>
+          </div>
+        )}
+        {error && (
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            height: '100%',
+            color: '#dc3545',
+            fontSize: '0.9em',
+            textAlign: 'center',
+            padding: '20px'
+          }}>
+            <div>⚠️ {error}</div>
+          </div>
+        )}
       </div>
     </div>
   );

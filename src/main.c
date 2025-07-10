@@ -32,7 +32,7 @@ int main(void) {
 
     for (int i = 0; i < count; i++) {
         // Pass headline, publishedAt, and URL to the analyze_headline function
-        Recommendation rec = analyze_headline(articles[i].title, articles[i].publishedAt, articles[i].url);
+        analyze_headline(articles[i].title, articles[i].publishedAt, articles[i].url);
         
         // Adding a blank line between article analyses for readability
         if (i < count - 1) {

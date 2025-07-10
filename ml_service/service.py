@@ -2,7 +2,7 @@ import os # Keep os import
 # Disable tokenizer parallelism before importing transformers
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS # Import CORS
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import shap
@@ -11,6 +11,7 @@ import numpy as np
 from newspaper import Article, Config
 import requests
 import traceback
+import json
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for the entire app
@@ -86,8 +87,13 @@ def scrape_article(url):
         print(traceback.format_exc())
         return None
 
-# Get NewsAPI Key - Use environment variable or fallback to the provided key
-NEWSAPI_KEY = os.environ.get("NEWSAPI_KEY", "0f64f75298ec40a9818c972bc74fabd9")
+# Get NewsAPI Key from environment variable
+NEWSAPI_KEY = os.environ.get("NEWSAPI_KEY")
+
+if not NEWSAPI_KEY:
+    print("WARNING: NEWSAPI_KEY environment variable not set")
+    print("Please set it with: export NEWSAPI_KEY=your_api_key_here")
+    print("The service will not work without a valid NewsAPI key.")
 
 def analyze_text(text_to_analyze, url=None):
     """Reusable analysis function, similar to existing /analyze logic."""
@@ -214,6 +220,71 @@ def analyze():
         "tokens": top_tokens
     })
 
+# New endpoint to fetch news and analyze with real-time streaming
+@app.route("/news_analysis_stream", methods=["GET"])
+def get_news_analysis_stream():
+    def generate():
+        yield "data: " + json.dumps({"status": "starting", "message": "Fetching news from NewsAPI..."}) + "\n\n"
+        
+        news_url = (
+            f"https://newsapi.org/v2/top-headlines?"
+            f"category=technology&language=en&pageSize=10&"
+            f"apiKey={NEWSAPI_KEY}"
+        )
+        
+        try:
+            response = requests.get(news_url, timeout=30)
+            response.raise_for_status()
+            news_data = response.json()
+
+            articles = news_data.get("articles", [])
+            yield "data: " + json.dumps({
+                "status": "fetched", 
+                "message": f"Fetched {len(articles)} articles. Starting analysis...", 
+                "total": len(articles)
+            }) + "\n\n"
+
+            for i, article in enumerate(articles):
+                headline = article.get("title", "")
+                article_url = article.get("url", "")
+                content_to_analyze = headline
+
+                yield "data: " + json.dumps({
+                    "status": "analyzing", 
+                    "message": f"Analyzing: {headline[:50]}...", 
+                    "current": i+1, 
+                    "total": len(articles)
+                }) + "\n\n"
+                
+                analysis_result = analyze_text(content_to_analyze, url=article_url)
+
+                result = {
+                    "status": "analyzed",
+                    "current": i+1,
+                    "total": len(articles),
+                    "article": {
+                        "headline": headline,
+                        "url": article_url,
+                        "sentiment": analysis_result.get("sentiment", 0.0),
+                        "tokens": analysis_result.get("tokens", [])
+                    }
+                }
+                yield "data: " + json.dumps(result) + "\n\n"
+
+            yield "data: " + json.dumps({"status": "complete", "message": "Analysis complete!"}) + "\n\n"
+
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Failed to fetch news: {e}"
+            yield "data: " + json.dumps({"status": "error", "message": error_msg}) + "\n\n"
+        except Exception as e:
+            error_msg = f"An internal error occurred: {e}"
+            yield "data: " + json.dumps({"status": "error", "message": error_msg}) + "\n\n"
+
+    response = Response(generate(), mimetype='text/event-stream')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Connection'] = 'keep-alive'
+    return response
+
 # New endpoint to fetch news and analyze
 @app.route("/news_analysis", methods=["GET"])
 def get_news_analysis():
@@ -225,7 +296,7 @@ def get_news_analysis():
     )
     results = []
     try:
-        response = requests.get(news_url, timeout=15)
+        response = requests.get(news_url, timeout=30)  # Increased timeout
         response.raise_for_status()
         news_data = response.json()
 
